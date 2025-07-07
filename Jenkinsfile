@@ -1,19 +1,15 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.10'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
 
     environment {
         DOCKER_IMAGE = 'manojphaju/flask-app:latest'
     }
 
+    agent any
+
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/manojphaju/OESON.git'
             }
         }
 
