@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.10' // Use official Python image with pip preinstalled
+            args '-u root'      // Run as root to allow installs if needed
+        }
+    }
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
@@ -18,12 +23,6 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    if ! command -v python3 &> /dev/null; then
-                        echo "Installing Python..."
-                        sudo apt update
-                        sudo apt install -y python3 python3-pip
-                    fi
-
                     echo "Upgrading pip..."
                     python3 -m pip install --upgrade pip
                 '''
@@ -34,10 +33,11 @@ pipeline {
             steps {
                 script {
                     if (fileExists('package.json')) {
+                        sh 'apt update && apt install -y npm' // optional, if needed
                         sh 'npm install'
                         sh 'npm test'
                     } else if (fileExists('pytest.ini') || fileExists('tests')) {
-                        sh 'pip install -r requirements.txt'
+                        sh 'python3 -m pip install -r requirements.txt'
                         sh 'pytest'
                     } else {
                         echo 'No recognized test framework found.'
