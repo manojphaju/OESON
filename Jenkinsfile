@@ -15,6 +15,21 @@ pipeline {
             }
         }
 
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    if ! command -v python3 &> /dev/null; then
+                        echo "Installing Python..."
+                        sudo apt update
+                        sudo apt install -y python3 python3-pip
+                    fi
+
+                    echo "Upgrading pip..."
+                    python3 -m pip install --upgrade pip
+                '''
+            }
+        }
+
         stage('Test') {
             steps {
                 script {
