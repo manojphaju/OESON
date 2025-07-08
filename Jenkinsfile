@@ -17,15 +17,16 @@ pipeline {
 
         stage('Test in Python Container') {
             steps {
-                sh '''
-                    docker run --rm -v "$PWD":/app -w /app python:3.10 bash -c "
-                        pip install --upgrade pip &&
-                        pip install -r requirements.txt &&
-                        pytest
-                    "
-                '''
-            }
-        }
+                 sh '''
+                docker run --rm -v "$PWD":/app -w /app python:3.10 bash -c "
+                pip install --upgrade pip &&
+                pip install -r requirements.txt &&
+                PYTHONPATH=/app pytest
+            "
+            '''
+                }
+                    }
+
 
         stage('Build Docker Image') {
             steps {
