@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    environment {
+        TF_DIR = 'infra/terraform'
+        ANSIBLE_DIR = 'ansible/playbooks'
+        K8S_DIR = 'k8s'
+    }
+
+    stages {
+        stage('Terraform: Provision Infrastructure') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Ansible: Install Tools') {
+            steps {
+                sh """
+                ansible-pull -U https://github.com/manojphaju/OESON.git \
+                    -d /tmp/ansible \
+                    -i localhost, \
+                    -e 'ansible_python_interpreter=/usr/bin/python3' \
+                    ${ANSIBLE_DIR}/setup-tools.yml
+                """
+            }
+        }
+
+        stage('Deploy App to Kubernetes') {
+            steps {
+                dir("${K8S_DIR}") {
+                    sh 'kubectl apply -f app-deployment.yaml'
+                }
+            }
+        }
+
+        stage('Set up Monitoring') {
+            steps {
+                sh """
+                ansible-pull -U https://github.com/manojphaju/OESON.git \
+                    -d /tmp/ansible \
+                    -i localhost, \
+                    -e 'ansible_python_interpreter=/usr/bin/python3' \
+                    ${ANSIBLE_DIR}/setup-monitoring.yml
+                """
+            }
+        }
+    }
+}

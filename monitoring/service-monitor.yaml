@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: python-service-monitor
+  namespace: monitoring
+  labels:
+    release: monitoring-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: python-microservice
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

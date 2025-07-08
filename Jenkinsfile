@@ -1,27 +1,31 @@
 pipeline {
-
-    environment {
-        DOCKER_IMAGE = 'manojphaju/flask-app:latest'
-    }
-
     agent any
 
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        KUBECONFIG_CREDENTIALS = credentials('kubeconfig-secret')
+        IMAGE_NAME = 'manojphaju/flask-app'
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
-                git 'https://github.com/manojphaju/OESON.git'
+                git branch: 'main', url: 'https://github.com/manojphaju/OESON.git'
             }
         }
 
         stage('Test') {
             steps {
                 script {
-                    if (fileExists('requirements.txt')) {
-                        echo '🐍 Python project detected — running pytest...'
+                    if (fileExists('package.json')) {
+                        sh 'npm install'
+                        sh 'npm test'
+                    } else if (fileExists('pytest.ini') || fileExists('tests')) {
                         sh 'pip install -r requirements.txt'
                         sh 'pytest'
                     } else {
-                        echo '⚠️ No requirements.txt found. Skipping test stage.'
+                        echo 'No recognized test framework found.'
                     }
                 }
             }
@@ -30,24 +34,28 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t $DOCKER_IMAGE:${env.BUILD_NUMBER} ."
+                    sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} ."
                 }
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                    sh "echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin"
-                    sh "docker push $DOCKER_IMAGE:${env.BUILD_NUMBER}"
+                script {
+                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                    sh "docker push ${IMAGE_NAME}:${env.BUILD_NUMBER}"
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh 'kubectl apply -f k8s/'
+                withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG_FILE')]) {
+                    script {
+                        sh 'mkdir -p $HOME/.kube'
+                        sh 'cp $KUBECONFIG_FILE $HOME/.kube/config'
+                        sh 'kubectl apply -f k8s/'
+                    }
                 }
             }
         }
@@ -55,10 +63,10 @@ pipeline {
 
     post {
         failure {
-            echo "❌ Pipeline failed. Check the logs for more information."
+            echo 'Pipeline failed.'
         }
         success {
-            echo "✅ Pipeline completed successfully!"
+            echo 'Pipeline completed successfully.'
         }
     }
 }

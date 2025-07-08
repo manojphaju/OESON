@@ -1,0 +1,10 @@
+- hosts: localhost
+  become: yes
+  tasks:
+    - name: Deploy Prometheus using Helm
+      shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts && \
+             helm repo update && \
+             helm install prometheus prometheus-community/prometheus
+
+    - name: Deploy Grafana using Helm
+      shell: helm install grafana grafana/grafana --set adminPassword=admin
