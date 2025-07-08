@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.10' // Use official Python image with pip preinstalled
-            args '-u root'      // Run as root to allow installs if needed
-        }
-    }
+    agent any
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
@@ -20,29 +15,15 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Test in Python Container') {
             steps {
                 sh '''
-                    echo "Upgrading pip..."
-                    python3 -m pip install --upgrade pip
+                    docker run --rm -v "$PWD":/app -w /app python:3.10 bash -c "
+                        pip install --upgrade pip &&
+                        pip install -r requirements.txt &&
+                        pytest
+                    "
                 '''
-            }
-        }
-
-        stage('Test') {
-            steps {
-                script {
-                    if (fileExists('package.json')) {
-                        sh 'apt update && apt install -y npm' // optional, if needed
-                        sh 'npm install'
-                        sh 'npm test'
-                    } else if (fileExists('pytest.ini') || fileExists('tests')) {
-                        sh 'python3 -m pip install -r requirements.txt'
-                        sh 'pytest'
-                    } else {
-                        echo 'No recognized test framework found.'
-                    }
-                }
             }
         }
 
