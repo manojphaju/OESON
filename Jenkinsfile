@@ -29,29 +29,25 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} ."
-                }
+                sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} ."
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                script {
-                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
-                    sh "docker push ${IMAGE_NAME}:${env.BUILD_NUMBER}"
-                }
+                sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                sh "docker push ${IMAGE_NAME}:${env.BUILD_NUMBER}"
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG_FILE')]) {
-                    script {
-                        sh 'mkdir -p $HOME/.kube'
-                        sh 'cp $KUBECONFIG_FILE $HOME/.kube/config'
-                        sh 'kubectl apply -f k8s/'
-                    }
+                    sh '''
+                        mkdir -p $HOME/.kube
+                        cp $KUBECONFIG_FILE $HOME/.kube/config
+                        kubectl apply -f k8s/
+                    '''
                 }
             }
         }
