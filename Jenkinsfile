@@ -30,7 +30,11 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} ."
+                script {
+            sh 'pwd'
+            sh 'ls -l'
+            sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} ."
+        }
             }
         }
 
